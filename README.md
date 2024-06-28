@@ -234,7 +234,7 @@ slurm可以使用以下命令：
     - `--mem=<megabytes>`：限制任务所使用的内存大小。当任务在运行过程中，内存使用量超过了这一限制，Slurm会立即终止这个任务。
     - `--exclusive`：申明任务所使用的计算节点是独占的。在这种情况下，Slurm可以保证分配给这个任务的节点只有这个任务运行。
     - `-s / --oversubscribe`：与`--exclusive`相反，允许一个计算节点被多个任务使用。
-- `sbatch`：提交一个任务脚本。文件结构如下：
+- `sbatch`：提交一个任务脚本，使用`-o <file_path>`指定输出文件名和路径。文件结构如下：
     ```shell
     #!/your/path/to/shell
     
@@ -254,8 +254,19 @@ slurm可以使用以下命令：
         - `STAGE_OUT`：作业的 stage out 完成时发送邮件通知（用于数据传输操作）。
         - `TIME_LIMIT`：作业达到时间限制时发送邮件通知。
         - `TIME_LIMIT_90`：作业达到时间限制的 90% 时发送邮件通知。
-
-**TODO**: 讲解Slurm
+    - `squeue`：查看目前任务队列。任务状态的缩写为：
+        - PD: Pending
+        - R: Running
+        - S: Suspended
+        - ST: Stopped
+        - CG: Completing
+        - CA: Cancelled
+        - F: Failed
+        - TO: Timeout
+        - PR: Preempted
+    - `scancel`：取消某个任务。参数可以是具体的任务编号，也可以是其他内容。详见[文档](https://slurm.schedmd.com/scancel.html)
+    - `salloc`：获取一个计算节点的使用权，并运行它的shell。
+    - `sacct`：查看任务相关信息。通过`sacct -j <job_id>`查看某个具体任务的信息。其他见[文档](https://slurm.schedmd.com/sacct.html)。
 
 ### 评判标准
 
