@@ -493,8 +493,8 @@ MPI程序的执行模型可以用下图描述
 
 <img src="./pic/MPI-exec-model.png" width = 60%>
 
-
 MPI程序的机器模型可以用下图描述。
+
 ![MPI machine](https://hpc-wiki.info/mediawiki/hpc_images/d/dc/MPI-model.png)
 
 P代表了处理器，M代表了内存。
