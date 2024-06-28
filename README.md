@@ -230,10 +230,30 @@ slurm可以使用以下命令：
     - `-p / --partition=<name>`：限制任务分配的计算节点分区。
     - `-N / --nodes=<min_nodes>`：限制任务使用的最小节点数（通常为实际分配到的节点数）。
     - `-n / --ntasks=<number_of_tasks>`：指定要运行的任务数量。通常为进程数。在提交运行MPI（见MPI小节）程序的任务时很常用
-    - `-c / --cpus-per_task=<number_of_cpus>`：
-    - `--mem=<megabytes>`：
-    - `--exclusive`：
-    - `-s / --oversubscribe`：
+    - `-c / --cpus-per_task=<number_of_cpus>`：指定每个任务所使用的核心数量，在提交运行OpenMP（见OpenMP小节）程序的任务时很常用。
+    - `--mem=<megabytes>`：限制任务所使用的内存大小。当任务在运行过程中，内存使用量超过了这一限制，Slurm会立即终止这个任务。
+    - `--exclusive`：申明任务所使用的计算节点是独占的。在这种情况下，Slurm可以保证分配给这个任务的节点只有这个任务运行。
+    - `-s / --oversubscribe`：与`--exclusive`相反，允许一个计算节点被多个任务使用。
+- `sbatch`：提交一个任务脚本。文件结构如下：
+    ```shell
+    #!/your/path/to/shell
+    
+    #SBATCH <command>
+    #...
+    
+    #Other commands
+    ```
+    其中，`#SBATCH`的`<command>`处可以放任何`srun`能接受的参数，它还能放：
+    - `--mail-user=<email>`：见下。
+    - `--mail-type=<type>[, <type>]`：在`<type>`运行情况时给`--mail-user`里的邮箱发邮件。`<type>`可以是：
+        - `BEGIN`：作业开始时发送邮件通知。
+        - `END`：作业结束时发送邮件通知。
+        - `FAIL`：作业失败时发送邮件通知。
+        - `REQUEUE`：作业被重新排队时发送邮件通知。
+        - `ALL`：作业在任何状态变化时（开始、结束、失败等）发送邮件通知。
+        - `STAGE_OUT`：作业的 stage out 完成时发送邮件通知（用于数据传输操作）。
+        - `TIME_LIMIT`：作业达到时间限制时发送邮件通知。
+        - `TIME_LIMIT_90`：作业达到时间限制的 90% 时发送邮件通知。
 
 **TODO**: 讲解Slurm
 
@@ -871,3 +891,8 @@ MPI Bound 是由MPI程序的通信开销与同步开销决定的。如果MPI Bou
 ### 练习
 
 **TODO**：考虑去年CA的优化project（用于熟悉microarchitecture的优化），以及并行计算的作业（侧重于MPI的优化）
+
+<h2 id="4">4. 鸣谢</h2>
+
+感谢：
+- [Ayanokoji-li](https://github.com/Ayanokoji-li)，它完成了本教程中的MPI部分，包括MPI的讲解和优化。
