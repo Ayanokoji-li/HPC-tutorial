@@ -817,22 +817,84 @@ int main(int argc, char **argv)
 ### 性能分析 (Profile)
 
 [运行](#2)这一章的前半内容主要关注程序运行的理论部分。从这一节开始，你将学习到benchmark的实操。前面我们已经了解过，评判程序性能的三大主要指标分别为Core Bound, Memory Bound 和 I/O Bound。而获取这些信息的过程就被称为性能分析 (Profile)。进行性能分析需要性能分析器 (Profiler)。常用的性能分析器有：
-- [Vtune](https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/overview.html)，由Intel公司推出的性能分析器，可以分析从微架构 (Microarchitecture) 到多节点之间的大部分内容，且支持查看某一行代码对应的汇编指令，以及其相关的性能指标。Vtune唯一的缺点就是只支持Intel处理器。
+- [VTune](https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/overview.html)，由Intel公司推出的性能分析器，可以分析从微架构 (Microarchitecture) 到多节点之间的大部分内容，且支持查看某一行代码对应的汇编指令，以及其相关的性能指标。Vtune唯一的缺点就是只支持Intel处理器。
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
 - [uProf](https://www.amd.com/en/developer/uprof.html)，由AMD公司推出的性能分析器。**不推荐使用**，目前Geekpie_HPC好像也没什么人用。
 - [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
 
-我们以VTune为例，介绍Profile的方法。
+VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运行所有类型的性能分析，但是显然我们更能直观地在GUI中查看分析结果。你可以在[这里 (Windows)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-windows/2024-2/use-case-and-prerequisites.html)或者[这里 (Linux)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-linux/2024-2/use-case-and-prerequisites.html)，跟着它的workflow来学习VTune的使用方法。当然，VTune GUI提供了远程Profile的方法，只要远程机器中安装有VTune，你就可以在本地的VTune启动远程Profile，所有的数据文件都会保存在本地。
 
 ### 数据可视化 (Visualize)
 
-**TODO**：几种表格的选择，数据呈现的形式
+在比赛的最终展示环节，我们需要以直观的形式呈现程序的运行结果。在比较不同的参数的运行结果时，一份好的图表也能帮助我们分析程序运行情况。因此，数据可视化也是一项重要的工作。
+
+数据可视化分为以下步骤：收集数据，选择图表，展示数据。
+
+#### 收集数据
+
+一个程序运行时，有Profile工具产生的性能分析数据，也有这个程序运行结束时由自身功能生成的数据。通常来说，在HPC比赛中，题目会要求你提取后者中某些特定的内容，而前者则需要根据你的需求自行提取。比如说，你希望关注到这个程序运行时MPI的通信情况，那么你可以选择ITAC Profiler，从中找到这个程序通行量的Hotspot，然后将其导出或者截图。
+
+在确定需要收集的数据之后，我们通常使用Excel来存放数据。稍后在展示数据环节，你可以使用Python的[Pandas](https://pandas.pydata.org/docs/user_guide/io.html)库来读取这些内容。
+
+#### 选择图表
+
+一组数据有非常多的呈现方式。不同的呈现方式能够使我们注意到数据的不同细节。
+
+- 柱形图：在仅有一组数据时，柱形图的作用只是展示在不同条件下某组数据的值。例如：
+
+    <center>
+        <div style="width=50%">
+            <a align="center">
+                <img src="./pic/Column-single-data.png" width = 60%>
+            </a>
+        </div>
+    </center>
+
+    这个图表展示了不同线程数目下某个程序的运行时间。可以发现，不管我们怎么移动不同线程数的展示位置，我们都能相对容易地观察出在这种条件下程序的运行时间。
+
+    如果有多组数据，我们就可以把在相同条件下的数据放到一起。这是簇状柱形图。如下图所示：
+
+    <center>
+        <div style="width=50%">
+            <a align="center">
+                <img src="./pic/Column-multiple-data.png" width = 60%>
+            </a>
+        </div>
+    </center>
+
+    可以发现，我们可以很方便地比较相同Threads下不同参数的运行时间。
+
+- 折线图：在仅有一组数据时，折线图可以表现出在同类条件不断变化时，数据的变化情况。它就好比对一个函数$f(x)$进行一些采样，并将采样结果用折线连接起来。当有多组数据时，也可以观察不同数据在面对同一变化情况时的变化趋势。
+
+    <center>
+        <div style="width=50%">
+            <a align="center">
+                <img src="./pic/Line-multiple-data.png" width = 60%>
+            </a>
+        </div>
+    </center>
+
+- 饼图：将一个圆盘细分为多个扇形，每个扇形代表某个数据所占所有数据大小的比例。通常用来展示几个占比较大的数据。
+
+- 其他类型的，包括热力图、散点图等，可以参考Excel中不同图表的选项。
+
+#### 展示数据
+
+许多工具都能被用来展示你的数据。
+
+- [Gnuplot](http://gnuplot.info/)：一个命令行数据展示工具。如果你的程序以一些比较有规律的方式输出数据（比如输出文件只有数据，且数据之间以一种约定好的方式排列），你可以直接使用它来展示数据，无需将其导入到Excel表格中，再使用pandas阅读。你可以在[这里](http://gnuplot.info/docs_5.0/gnuplot.pdf)查阅它的文档。
+- Excel：不熟悉的自行去熟悉。需要注意的是，图形化界面会使得图表难以被定制化
+
+    *Trick：通过对表格进行染色，你可以实现比Excel内置热力图更好的热力图。*
+- [Matplotlib](https://matplotlib.org/)：Python的一个数据展示API。它具有多种图表展示方式，具体请见文档。使用时，你可以借助Copilot来绘制出想要的图表，以节省查阅文档的时间。选择图标小节的图表就是由Matplotlib绘制的。
 
 ### 练习
 
 **TODO**：考虑跑一些基准测试，并行计算的作业，以及给一些现成代码来跑profile
 
 **TODO**：练习：OpenMP：设定环境变量，为单循环加入OpenMP，`critical`与`reduction`。考虑某个CA lab
+
+**TODO**：练习：给出一些收集到的原始数据，按要求整理出有效数据，并选择适当的图表展示出来。
 
 <h2 id="3">3. 优化</h2>
 
