@@ -1,5 +1,7 @@
 # HPC比赛教程
 
+作者：[HenryZ16](https://github.com/HenryZ16)，[Ayanokoji-li](https://github.com/Ayanokoji-li)
+
 <h2 id="0">0. 开始</h2>
 
 ### 基础内容
@@ -820,7 +822,7 @@ int main(int argc, char **argv)
 - [uProf](https://www.amd.com/en/developer/uprof.html)，由AMD公司推出的性能分析器。**不推荐使用**，目前Geekpie_HPC好像也没什么人用。
 - [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
 
-**TODO**
+我们以VTune为例，介绍Profile的方法。
 
 ### 数据可视化 (Visualize)
 
@@ -829,6 +831,7 @@ int main(int argc, char **argv)
 ### 练习
 
 **TODO**：考虑跑一些基准测试，并行计算的作业，以及给一些现成代码来跑profile
+
 **TODO**：练习：OpenMP：设定环境变量，为单循环加入OpenMP，`critical`与`reduction`。考虑某个CA lab
 
 <h2 id="3">3. 优化</h2>
@@ -906,4 +909,4 @@ MPI Bound 是由MPI程序的通信开销与同步开销决定的。如果MPI Bou
 <h2 id="4">4. 鸣谢</h2>
 
 感谢：
-- [Ayanokoji-li](https://github.com/Ayanokoji-li)，它完成了本教程中的MPI部分，包括MPI的讲解和优化。
+- [Ayanokoji-li](https://github.com/Ayanokoji-li)，它完成了本教程中的MPI部分，包括MPI的讲解和优化，以及为这个教程创建了一个仓库。
