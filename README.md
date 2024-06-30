@@ -810,9 +810,18 @@ int main(int argc, char **argv)
 
 读者们可以自行尝试如何运用MPI编写一段计算$\pi$，并且能适应任何进程数且保持精度的程序。
 
+*有一个非常适合并行计算的计算$\pi$的公式，叫做[BBP](https://en.wikipedia.org/wiki/Bailey%E2%80%93Borwein%E2%80%93Plouffe_formula)公式。读者可以自行阅读相关内容。*
+
 ### GPU加速
 
-**TODO**：CUDA，OpenACC
+#### CUDA
+**TODO**：CUDA
+
+#### OpenACC
+
+OpenACC是另一种借助GPU进行加速的
+
+**TODO**：OpenACC
 
 ### 性能分析 (Profile)
 
