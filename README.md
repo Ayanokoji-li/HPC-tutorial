@@ -825,6 +825,8 @@ OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一�
 
 ### 性能分析 (Profile)
 
+**TODO**：添加一些轻量级的profile工具比如`gperf`之类的？
+
 [运行](#2)这一章的前半内容主要关注程序运行的理论部分。从这一节开始，你将学习到benchmark的实操。前面我们已经了解过，评判程序性能的三大主要指标分别为Core Bound, Memory Bound 和 I/O Bound。而获取这些信息的过程就被称为性能分析 (Profile)。进行性能分析需要性能分析器 (Profiler)。常用的性能分析器有：
 - [VTune](https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/overview.html)，由Intel公司推出的性能分析器，可以分析从微架构 (Microarchitecture) 到多节点之间的大部分内容，且支持查看某一行代码对应的汇编指令，以及其相关的性能指标。Vtune唯一的缺点就是只支持Intel处理器。
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
@@ -899,11 +901,21 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 
 ### 练习
 
-**TODO**：考虑跑一些基准测试，并行计算的作业，以及给一些现成代码来跑profile
-
-**TODO**：练习：OpenMP：设定环境变量，为单循环加入OpenMP，`critical`与`reduction`。考虑某个CA lab
-
-**TODO**：练习：给出一些收集到的原始数据，按要求整理出有效数据，并选择适当的图表展示出来。
+- 基准测试工具种类繁多。你可以练习使用一些经典的基准测试工具。在熟练掌握运行基准测试之后，在比赛中遇到其他基准测试时，就可以通过阅读文档来自行配置了。你在这条练习中需要掌握的是：
+    - [HPL](https://netlib.org/benchmark/hpl/)
+    - [HPCG](https://hpcg-benchmark.org/)
+    - [IO500](https://io500.org/pages/running)
+    - [MLPerf Inference](https://mlcommons.org/benchmarks/inference-datacenter/)
+- 练习Profile。请根据Profile一节的VTune学习链接，练习profile VTune自带的matrix (sample)程序。
+- 练习使用SIMD。请打开CS110 24s的[lab11](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab11/lab11.html)，根据其引导熟悉x86_64 - AVX扩展指令集下SIMD的使用。
+- 练习使用OpenMP。
+    - 请打开CS110 24s的[lab13](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab13/lab13.html)，根据其引导熟悉OpenMP对for循环的优化。
+    - 请使用两种方式优化一段计算$sum = \sum_{i = 0}^{N - 1} a[i]$的[代码](./practice/ex2-4.cpp)。
+- **TODO**：练习使用MPI
+- **TODO**：练习使用CUDA
+- **TODO**：练习使用OpenACC
+- 如果你已经完成了[编译](#1)部分的编译[Conquest](https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/3014164484/Getting+started+with+Conquest+for+ISC24+SCC)练习，你现在可以试着做一下Weak Scaling和Strong Scaling，并采用合适的图表展示你的数据。
+- 如果你已经编译过[编译](#1)部分提到的SC24 - SCC题目的话，你现在可以尝试运行它们。
 
 <h2 id="3">3. 优化</h2>
 
