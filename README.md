@@ -819,7 +819,7 @@ int main(int argc, char **argv)
 
 #### OpenACC
 
-OpenACC是另一种借助GPU进行加速的
+OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
 
 **TODO**：OpenACC
 
