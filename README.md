@@ -812,10 +812,41 @@ int main(int argc, char **argv)
 
 *有一个非常适合并行计算的计算$\pi$的公式，叫做[BBP](https://en.wikipedia.org/wiki/Bailey%E2%80%93Borwein%E2%80%93Plouffe_formula)公式。读者可以自行阅读相关内容。*
 
-### GPU加速
+### GPU(异构)加速
 
 #### CUDA
 **TODO**：CUDA
+
+##### Introduce
+
+CUDA(computer unified device architecture)是NVIDIA针对自家产品推出的通用并行计算平台和编程模型。主要是利用[GPU](https://en.wikipedia.org/wiki/Graphics_processing_unit)进行大规模计算密集型任务(大部分是core bound的程序)。
+
+通常GPU是在单节点上通过PCIE总线与节点上的CPU进行通信。CPU和GPU的简易架构如下
+
+![CPU-GPU](./pic/CPU-GPU.png)
+
+首先我们可以看到CPU具有数量大体相同的计算与控制核心，因此CPU可以快速地处理具有复杂逻辑的任务。而对于GPU，计算核心远大于控制核心。示意图中的一行（一黄一紫一堆绿的一行）代表一个[SM](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)(streaming multiprocessor)。可以将其单独看作一个完整的多核处理单元（类似AVX计算单元）这意味着GPU可以同时处理大量数据，但是只能应对简单逻辑的任务。因此，CUDA程序可以看作SIMD架构的程序。
+
+CUDA支持的编程语言有C,C++,Fortran,Python。同时，他还有丰富的加速库如CUBLAS,CUFFT,Thrust等。CUDA提供了两层API来管理GPU，分别是驱动库和运行时库。驱动库虽然功能强大，能全面的控制GPU的运行，但是其编写难度很大。因此，我们将重心放在了编写难度较小的运行时库。
+
+##### CUDA Environment
+
+CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分主机代码（CPU运行）和设备代码（GPU运行），并分别分配给本地C语言编译器和NVCC编译器进行编译，然后进行整合。详细信息可以参考官网[Compilation Workflow](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#compilation-with-nvcc)
+
+在安装NVCC之前，我们需要确认拥有GPU的电脑是否已经正确了安装驱动。这个可以通过在命令行输入`nvidia-smi`进行确认。如果命令行中打印如下信息，则已有可用驱动。
+
+![nvidia-smi](./pic/nvidia-smi.png)
+
+在打印内容中可以在右上角发现当前驱动能够使用的最新CUDA版本。
+
+随后可以到官网下载相对应的[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+
+假如通过包管理器`apt`安装，可以通过`sudo update-alternatives --config cuda`切换系统默认的CUDA Toolkit版本。
+
+除此之外，也可以使用`spack install cuda@<version>`进行安装与管理
+
+安装完成后可以在命令行输入`nvcc --version`。若能正常打印则安装完成。
+
 
 #### OpenACC
 
@@ -983,7 +1014,7 @@ I/O Bound 主要有两方面，分别是硬盘读写与MPI框架下的通信。
 
 ##### Disk
 
-这是由程序对于文件频繁读取与写入导致的。可以考虑通过mmap减少对文件的直接读写。在使用MPI框架时可以考虑使用MPI API提供的分布式文件读写来并行化I/O。可以参考[hpcgame]()中的。。。题。
+这是由程序对于文件频繁读取与写入导致的。可以考虑通过mmap减少对文件的直接读写。在使用MPI框架时可以考虑使用MPI API提供的分布式文件读写来并行化I/O。
 
 ##### MPI Bound
 
