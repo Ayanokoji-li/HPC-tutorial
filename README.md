@@ -821,7 +821,7 @@ int main(int argc, char **argv)
 
 CUDA(computer unified device architecture)是NVIDIA针对自家产品推出的通用并行计算平台和编程模型。主要是利用[GPU](https://en.wikipedia.org/wiki/Graphics_processing_unit)进行大规模计算密集型任务(大部分是core bound的程序)。
 
-通常GPU是在单节点上通过PCIE总线与节点上的CPU进行通信。CPU和GPU的简易架构如下
+通常GPU是在单节点上通过PCIe总线与节点上的CPU进行通信。CPU和GPU的简易架构如下
 
 ![CPU-GPU](./pic/CPU-GPU.png)
 
@@ -847,6 +847,23 @@ CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分主机代码�
 
 安装完成后可以在命令行输入`nvcc --version`。若能正常打印则安装完成。
 
+##### NVCC 编译选项、运行与环境变量
+
+NVCC大部分的常用编译选项和C/C++语言编译器是相同的，如`-g`.`-O2`等。但是对于类似`-fopenmp`等需要C/C++语言编译器额外支持的编译选项则需要在这之前添加`-Xcompiler`表明是C/C++语言编译器特有选项。对于设备代码特殊优化的选项有一下这些：
+
+- `--gpu-architecture/-arch=<value>`：编译针对某种架构GPU的优化代码。可选value有`native, compute_*, sm_`等。具体可以在`nvcc --help`中查询。其中`native`会针对当前系统上的架构进行选择。
+
+- `--use_fast_math`：编译时利用一些快速数学库。可能会牺牲精度。
+
+CUDA程序与普通C/C++程序的运行方式没有区别。
+
+CUDA常用的环境变量是`CUDA_VISIBLE_DEVICES=<value>`，能设置程序可用的GPU。**value**表示了可见设备的序号。该序号与`nvidia-smi`中显示的设备序号一致。
+
+- `CUDA_VISIBLE_DEVICES=1,2`，表示序号1，2的设备对程序可见。
+- `CUDA_VISIBLE_DEVICES=^1`，表示除了序号1设备，其他设备对程序可见。
+- `CUDA_VISIBLE_DEVICES=-1`，表示禁用所有设备
+
+CUDA程序运行时实际使用的GPU也会根据编程的设定而变化。
 
 #### OpenACC
 
