@@ -872,9 +872,6 @@ OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一�
 **TODO**：OpenACC
 
 ### 性能分析 (Profile)
-
-**TODO**：添加一些轻量级的profile工具比如`gperf`之类的？
-
 [运行](#2)这一章的前半内容主要关注程序运行的理论部分。从这一节开始，你将学习到benchmark的实操。前面我们已经了解过，评判程序性能的三大主要指标分别为Core Bound, Memory Bound 和 I/O Bound。而获取这些信息的过程就被称为性能分析 (Profile)。进行性能分析需要性能分析器 (Profiler)。常用的性能分析器有：
 - [VTune](https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/overview.html)，由Intel公司推出的性能分析器，可以分析从微架构 (Microarchitecture) 到多节点之间的大部分内容，且支持查看某一行代码对应的汇编指令，以及其相关的性能指标。Vtune唯一的缺点就是只支持Intel处理器。
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
@@ -882,6 +879,16 @@ OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一�
 - [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
 
 VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运行所有类型的性能分析，但是显然我们更能直观地在GUI中查看分析结果。你可以在[这里 (Windows)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-windows/2024-2/use-case-and-prerequisites.html)或者[这里 (Linux)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-linux/2024-2/use-case-and-prerequisites.html)，跟着它的workflow来学习VTune的使用方法。当然，VTune GUI提供了远程Profile的方法，只要远程机器中安装有VTune，你就可以在本地的VTune启动远程Profile，所有的数据文件都会保存在本地。
+
+如果你认为这些性能分析器很臃肿，而你实际需要收集的性能数据不需要很详尽，你也可以选择一些轻量级的性能分析器，例如：
+- [gperftools](https://gperftools.github.io/gperftools/cpuprofile.html) GNU工具链的一个性能分析器。在编译时加入`-lprofiler`选项，并在代码中需要监测性能的部分插入`ProfilerStart(<filename>);`与`ProfilerStop();`，程序在运行时就能将监测数据保存至`<filename>`文件中。
+
+    监测数据可以通过文本和图形两种方式查看：
+    - `pprof --text ./path/to/prof_data`：以文本的方式输出性能监测结果。
+    - `pprof --gv ./path/to/prof_data`：以图片的方式输出性能监测结果。
+
+- [perf](https://perf.wiki.kernel.org/index.php/Main_Page) Linux内核自带的性能监测器。它不需要程序在编译时加入额外选项，使用`perf <command> [<application> <arguments>]`即可profile。
+
 
 ### 数据可视化 (Visualize)
 
