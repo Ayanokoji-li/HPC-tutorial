@@ -831,7 +831,7 @@ CUDA支持的编程语言有C,C++,Fortran,Python。同时，他还有丰富的�
 
 ##### CUDA Environment
 
-CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分主机代码（CPU运行）和设备代码（GPU运行），并分别分配给本地C语言编译器和NVCC编译器进行编译，然后进行整合。详细信息可以参考官网[Compilation Workflow](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#compilation-with-nvcc)
+CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分host代码（CPU运行）和device代码（GPU运行），并分别分配给本地C语言编译器和NVCC编译器进行编译，然后进行整合。详细信息可以参考[官网Compilation Workflow](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#compilation-with-nvcc)
 
 在安装NVCC之前，我们需要确认拥有GPU的电脑是否已经正确了安装驱动。这个可以通过在命令行输入`nvidia-smi`进行确认。如果命令行中打印如下信息，则已有可用驱动。
 
@@ -847,6 +847,8 @@ CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分主机代码�
 
 安装完成后可以在命令行输入`nvcc --version`。若能正常打印则安装完成。
 
+在文件夹`<CUDA_HOME>/extras/demo_suite`下有一些编译好的程序可以运行，如`bandwidthTest`，`busGrind`，`deviceQuery`等可以得到当前设备的信息。
+
 ##### NVCC 编译选项、运行与环境变量
 
 NVCC大部分的常用编译选项和C/C++语言编译器是相同的，如`-g`.`-O2`等。但是对于类似`-fopenmp`等需要C/C++语言编译器额外支持的编译选项则需要在这之前添加`-Xcompiler`表明是C/C++语言编译器特有选项。对于设备代码特殊优化的选项有一下这些：
@@ -854,6 +856,8 @@ NVCC大部分的常用编译选项和C/C++语言编译器是相同的，如`-g`.
 - `--gpu-architecture/-arch=<value>`：编译针对某种架构GPU的优化代码。可选value有`native, compute_*, sm_`等。具体可以在`nvcc --help`中查询。其中`native`会针对当前系统上的架构进行选择。
 
 - `--use_fast_math`：编译时利用一些快速数学库。可能会牺牲精度。
+
+其他编译选项的详细介绍可以从[官方文档NVIDIA CUDA Compiler Driver NVCC](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#command-option-description)中查找
 
 CUDA程序与普通C/C++程序的运行方式没有区别。
 
@@ -864,6 +868,130 @@ CUDA常用的环境变量是`CUDA_VISIBLE_DEVICES=<value>`，能设置程序可�
 - `CUDA_VISIBLE_DEVICES=-1`，表示禁用所有设备
 
 CUDA程序运行时实际使用的GPU也会根据编程的设定而变化。
+
+其他环境变量的详细介绍可以从[官方文档CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=nvcc#cuda-environment-variables)中查找
+
+##### CUDA编程模型
+
+
+典型的CUDA程序的结构如下
+1. 设置device
+2. 在device上分配内存
+1. 从host上拷贝原始数据至device
+2. 在host上调用核函数
+3. 从device上拷贝处理后数据至host
+4. 释放device上的内存
+
+我们先来看一段使用CUDA编写的VectorAdd程序
+
+```cpp
+// 这是驱动库
+// #include <cuda.h>
+// 这是运行时库
+#include <cuda_runtime.h>
+#include <iostream>
+
+__device__ int add(int a, int b)
+{
+    return a + b;
+}
+
+__global__ void VectorAdd(int *a, int *b, int *c, int n)
+{
+    int i = threadIdx.x;
+    if (i < n)
+    {
+        c[i] = add(a[i], b[i]);
+    }
+}
+
+__host__ void print_ans(int *a, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        std::cout << a[i] << " ";
+    }
+    std::cout << std::endl;
+}
+
+int main(int argc, char const *argv[])
+{
+    // 1. 设置device
+    // 不调用则默认为0
+    cudaSetDevice(0);
+
+    int n = 10;
+    int *a, *b, *c;
+    int *d_a, *d_b, *d_c;
+
+    // 2. 在device上分配内存
+    a = (int *)malloc(n * sizeof(int));
+    b = (int *)malloc(n * sizeof(int));
+    c = (int *)malloc(n * sizeof(int));
+
+    cudaMalloc(&d_a, n * sizeof(int));
+    cudaMalloc(&d_b, n * sizeof(int));
+    cudaMalloc(&d_c, n * sizeof(int));
+
+    for (int i = 0; i < n; i++)
+    {
+        a[i] = i;
+        b[i] = i;
+    }
+
+    // 3. 从host上拷贝原始数据至device
+    cudaMemcpy(d_a, a, n * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, n * sizeof(int), cudaMemcpyHostToDevice);
+
+    // 4. 在host上调用核函数
+    VectorAdd<<<1, n>>>(d_a, d_b, d_c, n);
+
+    // 5. 从device上拷贝处理后数据至host
+    cudaMemcpy(c, d_c, n * sizeof(int), cudaMemcpyDeviceToHost);
+
+    print_ans(c, n);
+
+    // 6. 释放device上的内存
+    free(a);
+    free(b);
+    free(c);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+
+    return 0;
+}
+```
+
+上述代码可以用`nvcc $filename`进行编译。运行后能够在命令行中看到如下输出
+
+`0 2 4 6 8 10 12 14 16 18`。
+
+接着我们来解释下CUDA代码中的特别之处
+
+- **函数类型**
+
+    在CUDA编程中，每个函数都会通过declaration specifier标记函数的执行方与调用方。有如下：
+    - `__device__`: 函数由device执行，由device调用
+    - `__global__`：函数由device执行，由host调用。而这样定义的函数一般被称为核函数（[kernel](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=nvcc#kernels)）
+    - `__host__`: 函数由host执行，由host调用（当函数没有declaration specifier时默认为该项）
+
+- **核函数调用**
+
+    从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关
+
+- **设备内存分配**
+
+    device上的内存需要在host代码中显式分配。上述代码中通过`cudaMalloc`分配。所分配的内存被称为[全局内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#device-memory)（此处为线性内存linear memory）。除了`cudaMalloc`之外，CUDA API还提供了其他类型的全局内存，如`cudaHostAlloc`用于分配[页锁定内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#page-locked-host-memory)。除了全局内存外，设备内存还有[共享内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#shared-memory)等其他类型。具体会在内存模型中展开。
+
+##### CUDA线程模型
+
+下图是CUDA执行时的线程组织示意图，其实际结构由<<< **GridDim**, **BlockDim** >>>定义。
+
+![Grid-Block](./pic/Grid-Block.png)
+
+Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到一个SM上执行）。而Block会根据GridDim组织为一个Grid。核函数的一次调用只会映射到一个Grid上运行。
 
 #### OpenACC
 
