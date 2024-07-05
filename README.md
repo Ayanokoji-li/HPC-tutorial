@@ -16,6 +16,8 @@
 
 Geekpie_HPC提供了[HPC Wiki](https://hpc.geekpie.club/wiki/index.html)，供你在知道某些概念，但是需要深入了解，或是查看往年比赛题目时使用。
 
+在完成本教程的练习之外，你可以看看PKU的[HPC Game](https://hpcgame.pku.edu.cn/)。这是一个类似于OI OJ的HPC OJ。你可以看看里边的题目，刷一刷题。
+
 *看到标了**TODO**的，请鞭策作者尽快完成（*
 
 ### Copilot
