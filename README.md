@@ -51,6 +51,8 @@ Github Copilot是一个辅助代码AI工具。我们强烈要求读到这句话�
 
 指令集架构（[ISA](https://en.wikipedia.org/wiki/Instruction_set_architecture), Instruction Set）是连接软件和硬件的桥梁。编译器将你的代码编译为特定指令集的机器语言，并将其交由机器执行。不同指令集架构可能会有一些特定功能的差别，比如一些[SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data)（Single Instruction Multiple Data）指令。
 
+更多内容，请参考[CA](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/index.html)和[CA3](https://lion.sist.shanghaitech.edu.cn/Course/CS210/21s/)的课程设计。这两门课程分别是计算机体系结构和计算机体系结构III，我们的很多内容都摘录自其中。
+
 *Steam上有一款叫Turing Complete的游戏，你可以通过它来认识一台计算机的体系结构。你如果不想花钱，你也可以在[NandGame](https://nandgame.com/)上体验到相似的内容*
 
 *玩这两个游戏的学习效率可能会比你去上CA课高*
