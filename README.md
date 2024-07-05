@@ -979,7 +979,9 @@ int main(int argc, char const *argv[])
 
 - **核函数调用**
 
-    从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关
+    从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关。
+
+    核函数的调用在host上是立即返回的。而`cudaMemcpy`会隐式等待之前提交的所有核函数完成再执行，并且该函数会等待操作执行完成之后再返回。
 
 - **设备内存分配**
 
@@ -991,7 +993,18 @@ int main(int argc, char const *argv[])
 
 ![Grid-Block](./pic/Grid-Block.png)
 
-Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到一个SM上执行）。而Block会根据GridDim组织为一个Grid。核函数的一次调用只会映射到一个Grid上运行。
+Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到一个SM上执行）。一个Block内Thread可以通过threadIdx(.x/y/z)唯一确定。一个Block大小可以从blockDim(.x/y/z)获得。
+
+而Block会根据GridDim组织为一个Grid。核函数的一次调用只会映射到一个Grid上运行。一个Grid内Block可以通过blockIdx(.x/y/z)唯一确定。一个Grid大小可以从gridDim(.x/y/z)获得。
+
+这里设置的线程执行配置是一种抽象的配置。实际GPU执行时会将Block根据GPU计算资源自动分配到SM上，下图是分配的示意图
+
+![GPU-SM-Block](./pic/GPU-SM-Block.png)
+
+需要注意的是实际运行时一个SM内Block的执行顺序是不确定的。又因为SM之间是相互独立无法影响的，CUDA API提供的直接同步函数，如`__syncthreads()`仅能同步一个Block内的线程，无法做到Block间同步。如果希望Block间同步则需要手动实现，如使用原子操作与全局内存或借助核函数的隐式Block同步。也可以参考[论文Inter-block GPU communication via fast barrier synchronization](https://ieeexplore.ieee.org/abstract/document/5470477)进一步了解。但由于Block执行的不确定性，一般Block间同步开销很大。所以如果真的需要进行Block间同步，优先考虑修改算法或利用核函数的隐式同步。
+
+分配之后，SM会将Block内的Thread映射至CUDA Cores上执行。
+
 
 #### OpenACC
 
