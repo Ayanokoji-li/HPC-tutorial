@@ -825,7 +825,7 @@ CUDA(computer unified device architecture)是NVIDIA针对自家产品推出的�
 
 ![CPU-GPU](./pic/CPU-GPU.png)
 
-首先我们可以看到CPU具有数量大体相同的计算与控制核心，因此CPU可以快速地处理具有复杂逻辑的任务。而对于GPU，计算核心远大于控制核心。示意图中的一行（一黄一紫一堆绿的一行）代表一个[SM](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)(streaming multiprocessor)。可以将其单独看作一个完整的多核处理单元（类似AVX计算单元）这意味着GPU可以同时处理大量数据，但是只能应对简单逻辑的任务。因此，CUDA程序可以看作SIMD架构的程序。
+首先我们可以看到CPU具有数量大体相同的计算与控制核心，因此CPU可以快速地处理具有复杂逻辑的任务。而对于GPU，计算核心远大于控制核心。示意图中的一行（一黄一紫一堆绿的一行）代表一个[SM](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)(streaming multiprocessor)。可以将其单独看作一个完整的多核处理单元（类似AVX计算单元）这意味着GPU可以同时处理大量数据，但是只能应对简单逻辑的任务。因此，CUDA程序可以看作是与SIMD架构类似的程序模式，官方称之为[SIMT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)。
 
 CUDA支持的编程语言有C,C++,Fortran,Python。同时，他还有丰富的加速库如CUBLAS,CUFFT,Thrust等。CUDA提供了两层API来管理GPU，分别是驱动库和运行时库。驱动库虽然功能强大，能全面的控制GPU的运行，但是其编写难度很大。因此，我们将重心放在了编写难度较小的运行时库。
 
@@ -981,7 +981,7 @@ int main(int argc, char const *argv[])
 
     从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关。
 
-    核函数的调用在host上是立即返回的。而`cudaMemcpy`会隐式等待之前提交的所有核函数完成再执行，并且该函数会等待操作执行完成之后再返回。
+    核函数的调用在host上是立即返回的。而`cudaMemcpy`等用于内存拷贝的函数会隐式等待之前提交的所有核函数完成再执行，并且该函数会等待操作执行完成之后再返回。
 
 - **设备内存分配**
 
@@ -1003,7 +1003,81 @@ Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到�
 
 需要注意的是实际运行时一个SM内Block的执行顺序是不确定的。又因为SM之间是相互独立无法影响的，CUDA API提供的直接同步函数，如`__syncthreads()`仅能同步一个Block内的线程，无法做到Block间同步。如果希望Block间同步则需要手动实现，如使用原子操作与全局内存或借助核函数的隐式Block同步。也可以参考[论文Inter-block GPU communication via fast barrier synchronization](https://ieeexplore.ieee.org/abstract/document/5470477)进一步了解。但由于Block执行的不确定性，一般Block间同步开销很大。所以如果真的需要进行Block间同步，优先考虑修改算法或利用核函数的隐式同步。
 
-分配之后，SM会将Block内的Thread映射至CUDA Cores上执行。
+分配之后，SM会将Block内的Thread映射至CUDA Cores上执行，并且以[Warp](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第一段)的形式管理、调度、执行任务。他们会在共享相同的程序地址，私有PC和寄存器状态。因此能做到独立执行与分支。但是Warp内所有线程同一时间只会执行相同的代码。假设在Warp中发生了Threads进入了不同分支，则会发生[Warp Divergence](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第三段)。此时Warp会禁用不进入分支的Thread，然后执行。
+
+Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x`，详情可以参考[Thread Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#thread-hierarchy)得到Thread的一维索引后连续划分，一般以32为一个单位（可以运行样例程序`deviceQuery`查询）。如果Warp中线程不满32则会创建空线程填充，故Block内Thread数量不是32的倍数时会导致有一些运算设备闲置。
+
+##### CUDA内存模型
+
+下图是来自官网[Memory Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#memory-hierarchy)的内存模型示意图。
+
+![Memory](./pic/CUDA-memory.png)
+
+图中介绍了四种内存的位置与生命周期。我们先聚焦于局部变量（local memory）、共享变量（share memory）和全局变量（global memory）。
+
+- `local memory`:
+  - 和普通C程序局部变量的定义和使用方式一样，只是定义在了核函数内
+    ```cpp
+    __global__ void exampleKernel()
+    {
+    // 定义一个 local memory 变量
+    float localVariable = 1.0f;
+
+    // 使用 localVariable 进行计算
+    }
+    ```
+
+  - 作用域是线程自身
+  - 生命周期直到该线程的销毁，一般是核函数的结束。
+- `share memory`:
+  - 在核函数开始处用`__shared__ <type> <symbol>[const num]`声明变量。不能在控制流语句内使用。
+    ```cpp
+    __global__ void exampleKernel() {
+    // 定义一个共享内存变量
+    __shared__ float sharedVariable[256];
+
+    // 使用 sharedVariable 进行计算...
+    }
+    ```
+  - 如果需要动态声明，则需要在启动核函数时扩展<<< **GridDim**, **BlockDim** >>>至<<< **GridDim**, **BlockDim** , **sharedMemSize**>>>。其内存地址通过`extern __shared__ <type> <symbol>[]`获得
+    ```cpp
+    __global__ void dynamicSharedMemoryKernel(int* data, int dataSize) {
+    // 动态分配共享内存
+    extern __shared__ int sharedData[];
+
+    // 使用 sharedData 进行计算...
+    // 例如，将每个线程的数据复制到共享内存中
+    int tid = threadIdx.x;
+    if (tid < dataSize) {
+        sharedData[tid] = data[tid];
+    }
+
+    // 确保所有线程都完成了共享内存的写入
+    __syncthreads();
+
+    // 其他使用共享内存的计算...
+    }   
+
+    // 在主函数中调用 kernel，指定动态共享内存的大小
+    int main() {
+        int* data;
+        int dataSize = 256; // 假设数据大小为 256
+        int sharedMemSize = dataSize * sizeof(int);
+
+        // 分配 data 空间、初始化 data、拷贝数据到设备等操作...
+
+        // 启动 kernel，最后一个参数指定动态共享内存的大小
+        dynamicSharedMemoryKernel<<<1, dataSize, sharedMemSize>>>(data, dataSize);
+
+        // 清理资源等操作...
+
+        return 0;
+    }
+    ```
+  - 作用域是Block内的所有线程。
+  - 生命周期直到Block的销毁，一般是核函数的结束
+- `global memory`
+  - 可以在
 
 
 #### OpenACC
