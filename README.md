@@ -204,7 +204,7 @@ spack有着非常简单的更改依赖语法。在`<project>`中，你可以通�
 ### 练习
 
 - [更改优化选项](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab11/lab11.html)。这是CS110-24S的Lab11，其中的Part 4要求你将网页中的代码复制到[godbolt](https://godbolt.org/)中，并分别使用`-O0`和`-O3`编译。你可能对汇编语言还不了解，但是可以通过对比生成的汇编代码长度，以及是否出现某些常数来对比代码的优化。你也可以把前文中`swap`的内容复制进去，并看看编译器是如何优化的。
-- [完善Makefile](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/homework/homework3.html)。这是CS110-24S的HW3，其中的Task3要求你通过makefile将你的代码编译为静态库 (Static Library) 和动态库 (Shared Library)。**TODO**：在春学期课程结束以后把代码贴出来
+- [完善Makefile](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/homework/homework3.html)。这是CS110-24S的HW3，其中的Task3要求你通过[这里的makefile](./practice/ex1-2/Makefile)将你的代码编译为静态库 (Static Library) 和动态库 (Shared Library)。
 - 封装Singularity镜像。你可以选择以上任何一个练习，并使用Singularity将你程序和程序运行所需要的环境封装成镜像。如果你有信院集群的使用权限，你可以将你在本地编译好的程序直接放到集群上运行，再将你封装好的镜像放到集群上运行。你可能会看到，在第一种情况下，系统会提示你找不到GLIBC 2.XX库。这是因为信院集群的GLIBC 2.17版本太低。在第二种情况下，你可以顺利运行你的程序，并得到预期结果。
 - 尝试编译[Conquest](https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/3014164484/Getting+started+with+Conquest+for+ISC24+SCC)。这是ISC24的线上赛题之一，它的编译链长度适合作为练习之一。然后，使用spack来安装conquest，并学习定制化安装时spack需要做的操作，体会spack的局限。在遇到某些编译问题时，你可能需要去频繁查阅资料，或者询问这道题的当事人（[HenryZ16](https://github.com/HenryZ16)）
 
