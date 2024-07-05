@@ -182,7 +182,7 @@ spack集成了很多常用项目的构建规则，用户仅需通过`spack insta
 
 spack有着非常简单的更改依赖语法。在`<project>`中，你可以通过在项目名称后使用`[@version]`来指定版本，也可以使用`[^dependency]`来指定特定依赖，甚至可以使用`[%compiler]`来指定编译器。
 
-在项目安装完成以后，你可以使用`spack load <project>`来在当前shell中启用该项目。使用`spack unload <project>`则可以禁用改项目。
+在项目安装完成以后，你可以使用`spack load <project>`来在当前shell中启用该项目。使用`spack unload <project>`则可以禁用该项目。
 
 要查看默认依赖，可以使用`spack spec <project>`。
 
