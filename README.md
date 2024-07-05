@@ -190,6 +190,10 @@ spack有着非常简单的更改依赖语法。在`<project>`中，你可以通�
 
 本质上来说，`spack`这样的包管理器是与`apt`之类不同的。`apt`等包管理器，是将二进制文件下载到主机中，并添加相应的环境变量；而`spack`则是下载相应的代码并进行构建。
 
+*Q: Spack能平替掉像apt这样的包管理器吗？或者反过来？*
+
+*A: 都不可以。我们已经了解过，Spack的原理是将源代码拉到本地，再编译生成二进制文件的。因此，对于某些不开源的项目而言，Spack是无法安装它们的。其次，你可能已经注意到了，使用apt进行安装时，你需要`sudo`权限，而Spack则不需要。因此，Spack可以让你在无法取得管理员权限时（这通常在很多集群上），在你的用户目录中安装程序。*
+
 ### 容器化 (Containerize)
 
 所谓容器（Container），就是集成了程序和其运行环境的，类似于一种压缩包的东西。使用合适的容器管理工具（如[Docker](https://www.docker.com/)或[Singularity](https://docs.sylabs.io/guides/3.5/user-guide/)），可以在任何平台运行由不同平台构建的容器。它的本质是虚拟机镜像（image），容器管理工具只是把这样的镜像实例化。由于集成了程序的运行环境，镜像的占用空间往往会比程序本体大，但是这也方便了程序的迁移 *（比如在万年不更新glibc的信院集群上运行各种程序）* 。
@@ -1001,7 +1005,9 @@ Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到�
 
 #### OpenACC
 
-OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
+*OpenACC是在你不会写CUDA的时候使用的API。它很简单，自然也不能做到像CUDA那样精确控制。*
+
+[OpenACC](https://documentation.sigma2.no/code_development/guides/openacc.html)是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
 
 **TODO**：OpenACC
 
