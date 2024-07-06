@@ -16,6 +16,8 @@
 
 Geekpie_HPC提供了[HPC Wiki](https://hpc.geekpie.club/wiki/index.html)，供你在知道某些概念，但是需要深入了解，或是查看往年比赛题目时使用。
 
+在完成本教程的练习之外，你可以看看PKU的[HPC Game](https://hpcgame.pku.edu.cn/)。这是一个类似于OI OJ的HPC OJ。你可以看看里边的题目，刷一刷题。
+
 *看到标了**TODO**的，请鞭策作者尽快完成（*
 
 ### Copilot
@@ -50,6 +52,8 @@ Github Copilot是一个辅助代码AI工具。我们强烈要求读到这句话�
 - 输入输出（I/O）：既包括人机交互的设备，也包含诸如网络通信等能与其他计算机沟通的设备
 
 指令集架构（[ISA](https://en.wikipedia.org/wiki/Instruction_set_architecture), Instruction Set）是连接软件和硬件的桥梁。编译器将你的代码编译为特定指令集的机器语言，并将其交由机器执行。不同指令集架构可能会有一些特定功能的差别，比如一些[SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data)（Single Instruction Multiple Data）指令。
+
+更多内容，请参考[CA](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/index.html)和[CA3](https://lion.sist.shanghaitech.edu.cn/Course/CS210/21s/)的课程设计。这两门课程分别是计算机体系结构和计算机体系结构III，我们的很多内容都摘录自其中。
 
 *Steam上有一款叫Turing Complete的游戏，你可以通过它来认识一台计算机的体系结构。你如果不想花钱，你也可以在[NandGame](https://nandgame.com/)上体验到相似的内容*
 
@@ -182,11 +186,15 @@ spack集成了很多常用项目的构建规则，用户仅需通过`spack insta
 
 spack有着非常简单的更改依赖语法。在`<project>`中，你可以通过在项目名称后使用`[@version]`来指定版本，也可以使用`[^dependency]`来指定特定依赖，甚至可以使用`[%compiler]`来指定编译器。
 
-在项目安装完成以后，你可以使用`spack load <project>`来在当前shell中启用该项目。使用`spack unload <project>`则可以禁用改项目。
+在项目安装完成以后，你可以使用`spack load <project>`来在当前shell中启用该项目。使用`spack unload <project>`则可以禁用该项目。
 
 要查看默认依赖，可以使用`spack spec <project>`。
 
 本质上来说，`spack`这样的包管理器是与`apt`之类不同的。`apt`等包管理器，是将二进制文件下载到主机中，并添加相应的环境变量；而`spack`则是下载相应的代码并进行构建。
+
+*Q: Spack能平替掉像apt这样的包管理器吗？或者反过来？*
+
+*A: 都不可以。我们已经了解过，Spack的原理是将源代码拉到本地，再编译生成二进制文件的。因此，对于某些不开源的项目而言，Spack是无法安装它们的。其次，你可能已经注意到了，使用apt进行安装时，你需要`sudo`权限，而Spack则不需要。因此，Spack可以让你在无法取得管理员权限时（这通常在很多集群上），在你的用户目录中安装程序。*
 
 ### 容器化 (Containerize)
 
@@ -200,12 +208,16 @@ spack有着非常简单的更改依赖语法。在`<project>`中，你可以通�
 
 *不要以为在容器里，就可以作死使用`rm -rf ./`了！*
 
+*Q: 除了跑HPL, HPCG, 容器还能干什么？*
+
+*A: 想想容器的本质是什么。我们说，容器的本质是一个虚拟机。因此，你可以随便配置你容器内的环境，而无需担心对宿主机的环境造成影响。当然，如果你配置容器内环境时，对挂载进来的目录进行了一些修改，那还是会有些许影响的。因此，如果能少挂载目录，那就尽量少挂载。*
 
 ### 练习
 
 - [更改优化选项](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab11/lab11.html)。这是CS110-24S的Lab11，其中的Part 4要求你将网页中的代码复制到[godbolt](https://godbolt.org/)中，并分别使用`-O0`和`-O3`编译。你可能对汇编语言还不了解，但是可以通过对比生成的汇编代码长度，以及是否出现某些常数来对比代码的优化。你也可以把前文中`swap`的内容复制进去，并看看编译器是如何优化的。
-- [完善Makefile](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/homework/homework3.html)。这是CS110-24S的HW3，其中的Task3要求你通过makefile将你的代码编译为静态库 (Static Library) 和动态库 (Shared Library)。**TODO**：在春学期课程结束以后把代码贴出来
+- [完善Makefile](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/homework/homework3.html)。这是CS110-24S的HW3，其中的Task3要求你通过[这里的makefile](./practice/ex1-2/Makefile)将你的代码编译为静态库 (Static Library) 和动态库 (Shared Library)。
 - 封装Singularity镜像。你可以选择以上任何一个练习，并使用Singularity将你程序和程序运行所需要的环境封装成镜像。如果你有信院集群的使用权限，你可以将你在本地编译好的程序直接放到集群上运行，再将你封装好的镜像放到集群上运行。你可能会看到，在第一种情况下，系统会提示你找不到GLIBC 2.XX库。这是因为信院集群的GLIBC 2.17版本太低。在第二种情况下，你可以顺利运行你的程序，并得到预期结果。
+- 尝试编译[一段测试代码](./practice/ex1-4.cpp)。这是某年的神秘招新题目。它只有一个源文件，所以你不用担心编译这个文件时需要配置什么编译顺序。但是，它涉及到了很多依赖。因此，这道题的挑战就在于你能否正确配置好这些依赖项。如果你能成功编译这个文件，它可以输出一张图片。
 - 尝试编译[Conquest](https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/3014164484/Getting+started+with+Conquest+for+ISC24+SCC)。这是ISC24的线上赛题之一，它的编译链长度适合作为练习之一。然后，使用spack来安装conquest，并学习定制化安装时spack需要做的操作，体会spack的局限。在遇到某些编译问题时，你可能需要去频繁查阅资料，或者询问这道题的当事人（[HenryZ16](https://github.com/HenryZ16)）
 
 在你完成以上练习后，你可以去看看SC24的赛题：
@@ -1082,7 +1094,9 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
 
 #### OpenACC
 
-OpenACC是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
+*OpenACC是在你不会写CUDA的时候使用的API。它很简单，自然也不能做到像CUDA那样精确控制。*
+
+[OpenACC](https://documentation.sigma2.no/code_development/guides/openacc.html)是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
 
 **TODO**：OpenACC
 
