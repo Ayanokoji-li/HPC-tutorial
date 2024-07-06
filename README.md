@@ -1215,6 +1215,8 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 
 #### Core Bound
 
+#TODO GPU-warp divergence
+
 Core Bound 是由你的程序的计算量决定的。如果Core Bound较高，这通常意味着你需要优化你的算法，或者精简某些需要重复计算的代码。本教程不涉及算法的讲解。
 
 此外，一些[Hazard](https://en.wikipedia.org/wiki/Hazard_(computer_architecture))也会导致Core Bound较高。这时候，你可以做循环展开（[Loop Unroll](https://en.wikipedia.org/wiki/Loop_unrolling)），或者优化一些不必要的分支判断。
@@ -1224,6 +1226,8 @@ SIMD也是优化计算的好方法。但是，某些情况下，数据的计算�
 *Tips: 对于计算机而言，做除法通常会比做乘法慢得多。因此，在可能的情况下，编译器会自动将你程序中的除法优化为乘法。但是，某些编译器似乎不会优化SIMD的除法指令。这时候你就需要手动将这些除法指令优化为乘法指令。*
 
 #### Memory Bound
+
+#TODO GPU-shared memory
 
 Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的RAM足够大，不太会涉及到向SWAP交换的优化，因此你应该主要关注针对Cache的优化。
 
