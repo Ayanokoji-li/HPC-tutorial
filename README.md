@@ -859,7 +859,7 @@ CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分host代码（C
 
 安装完成后可以在命令行输入`nvcc --version`。若能正常打印则安装完成。
 
-在文件夹`<CUDA_HOME>/extras/demo_suite`下有一些编译好的程序可以运行，如`bandwidthTest`，`busGrind`，`deviceQuery`等可以得到当前设备的信息。
+<!-- 在文件夹`<CUDA_HOME>/extras/demo_suite`下有一些编译好的程序可以运行，如`bandwidthTest`，`busGrind`，`deviceQuery`等可以得到当前设备的信息。 -->
 
 ##### NVCC 编译选项、运行与环境变量
 
@@ -984,7 +984,7 @@ int main(int argc, char const *argv[])
 
 - **函数类型**
 
-    在CUDA编程中，每个函数都会通过declaration specifier标记函数的执行方与调用方。有如下：
+    在CUDA编程中，每个函数都会通过[Function Execution Space Specifiers](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#function-execution-space-specifiers)标记函数的执行方与调用方。有如下：
     - `__device__`: 函数由device执行，由device调用
     - `__global__`：函数由device执行，由host调用。而这样定义的函数一般被称为核函数（[kernel](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=nvcc#kernels)）
     - `__host__`: 函数由host执行，由host调用（当函数没有declaration specifier时默认为该项）
@@ -1026,6 +1026,8 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
 ![Memory](./pic/CUDA-memory.png)
 
 图中介绍了四种内存的位置与生命周期。我们先聚焦于局部变量（local memory）、共享变量（share memory）和全局变量（global memory）。
+
+除了local memory，其他两种设备变量都需要[Variable Memory Space Specifiers](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#variable-memory-space-specifiers)修饰。
 
 - `local memory`:
   - 和普通C程序局部变量的定义和使用方式一样，只是定义在了核函数内
@@ -1088,8 +1090,61 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
     ```
   - 作用域是Block内的所有线程。
   - 生命周期直到Block的销毁，一般是核函数的结束
+  - 由于共享内存物理设计上离核更近（有些结构上与L1共用片上缓存，其配比由核函数间接决定），其大小有限但访问速度十分快。一般是优化CUDA程序访存的重点。
+  - 
 - `global memory`
-  - 可以在
+  - 可以在全局作用域用`__device__`(线性内存)或`__constant__`(常量内存)修饰符声明变量。
+  - 若需要动态分配可以在host代码中使用先声明需要的指针变量，在host上通过`cudaMalloc`，`cudaFree`管理。
+
+    ```cpp
+    #include <cuda_runtime.h>
+    #include <iostream>
+
+    // 声明全局内存中的变量
+    __device__ float globalVar = 10.0f;
+
+    // 声明常量内存中的变量
+    __constant__ float constVar = 20.0f;
+
+    // 核函数，使用全局变量和常量变量
+    __global__ void useGlobalAndConstVar(float *output, int dataSize) 
+    {
+        int idx = threadIdx.x;
+        if (idx < dataSize) 
+        {
+                output[idx] = globalVar + constVar;
+        }
+    }
+
+    int main() 
+    {
+        const int dataSize = 256;
+        float hostArray[dataSize];
+
+        // 分配设备内存
+        float *devArray;
+        cudaMalloc((void **)&devArray, dataSize * sizeof(float));
+
+        // 启动核函数
+        useGlobalAndConstVar<<<1, dataSize>>>(devArray, dataSize);
+
+        // 将结果从设备内存复制回主机内存
+        cudaMemcpy(hostArray, devArray, dataSize * sizeof(float),cudaMemcpyDeviceToHost);
+
+        // 打印结果
+        for (int i = 0; i < 10; ++i) 
+        { // 仅打印前10个结果
+            std::cout << "Result[" << i << "]: " << hostArray[i] << std::endl;
+        }
+
+        // 清理设备内存
+        cudaFree(devArray);
+
+        return 0;
+    }
+    ```
+  - 如果需要在host控制在全局作用域中声明的变量则需要`cudaGetSymbolAddress() / cudaGetSymbolSize() / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol()`
+  - 全局内存还包括了纹理内存([Texture Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#texture-memory))和表面内存([Surface Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#surface-memory))。他们具有特殊优化的缓存结构。还有统一虚拟内存([UVA](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#unified-virtual-address-space))，用于控制多设备与主机内存访问。[Device Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime)还有很多种，详细了解可以参考官网。
 
 
 #### OpenACC
@@ -1106,6 +1161,8 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
 - [uProf](https://www.amd.com/en/developer/uprof.html)，由AMD公司推出的性能分析器。**不推荐使用**，目前Geekpie_HPC好像也没什么人用。
 - [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
+- [Nsight Systems](https://docs.nvidia.com/nsight-systems/UserGuide/index.html)，由Nvidia公司推出的系统级性能分析器，包括了GPU与CPU之间的交互以及运行状态等。能够跟踪OpenMP,MPI,CUDA,OpenACC。有UI界面。
+- [Nsight Compute](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html),由Nvidia公司推出的内核级性能分析器，包括了核函数运行时的微架构（内存及缓存间的交互）等。有UI界面。
 
 VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运行所有类型的性能分析，但是显然我们更能直观地在GUI中查看分析结果。你可以在[这里 (Windows)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-windows/2024-2/use-case-and-prerequisites.html)或者[这里 (Linux)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-linux/2024-2/use-case-and-prerequisites.html)，跟着它的workflow来学习VTune的使用方法。当然，VTune GUI提供了远程Profile的方法，只要远程机器中安装有VTune，你就可以在本地的VTune启动远程Profile，所有的数据文件都会保存在本地。
 
