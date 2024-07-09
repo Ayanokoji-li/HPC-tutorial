@@ -87,7 +87,6 @@ int main(int argc, char **argv)
     dim3 threadsPerBlock(16, 16);
     dim3 blocksPerGrid((n3 + 15) / 16, (n1 + 15) / 16);
     matrixMul<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_b, d_c, n1, n2, n3);
-    cudaDeviceSynchronize();
     cudaMemcpy(c, d_c, n1 * n3 * sizeof(double), cudaMemcpyDeviceToHost);
 
 #ifdef DEBUG
