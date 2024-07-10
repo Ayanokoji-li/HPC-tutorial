@@ -1211,4 +1211,7 @@ MPI Bound 是由MPI程序的通信开销与同步开销决定的。如果MPI Bou
 <h2 id="4">4. 鸣谢</h2>
 
 感谢：
-- [Ayanokoji-li](https://github.com/Ayanokoji-li)，它完成了本教程中的MPI部分，包括MPI的讲解和优化，以及为这个教程创建了一个仓库。
+- [Ayanokoji-li](https://github.com/Ayanokoji-li)，他完成了：
+    - MPI部分，包括MPI的讲解和优化
+    - CUDA部分
+    - 为这个教程创建了一个仓库。
