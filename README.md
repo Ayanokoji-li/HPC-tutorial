@@ -1151,9 +1151,21 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
 
 #### OpenACC
 
+> 注意：作者对OpenACC不甚了解，没有实践经验。以下段落是作者阅读[相关课程的课件](https://lion.sist.shanghaitech.edu.cn/Course/CS210/21s/files/Chapter_16.pdf)和询问AI来撰写的。欢迎熟悉OpenACC的读者协助完成此节orz，或者阅读[这一篇教程](https://documentation.sigma2.no/code_development/guides/openacc.html)
+
 *OpenACC是在你不会写CUDA的时候使用的API。它很简单，自然也不能做到像CUDA那样精确控制。*
 
-[OpenACC](https://documentation.sigma2.no/code_development/guides/openacc.html)是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。
+[OpenACC](https://www.openacc.org/)是另一种借助GPU进行加速的API。它在语法上与OpenMP有一定相似之处，包括一些函数、环境变量和`#pragma` directive等。通过类比OpenMP，你可以快速入门OpenACC：
+
+|           | OpenMP    | OpenACC   |
+|-          |-          |-          |
+|编译选项 (gcc)                                 |`-fopenmp` |`-fopenacc`  |
+|`#pragma <type>`                               |`omp`      |`acc`        |
+|标记并行区域 `#pragma <omp/acc> <directive>`    |`parallel` |`parallel`   |
+|自动优化并行区域 `#pragma acc <directive>`      |           |`kernels`    |
+|优化循环 `#pragma <omp/acc> <directive>`       |`for`      |`loop`       |
+
+某些编译器能够使OpenACC更好地兼容特定硬件，例如[PGI编译器](https://docs.nvidia.com/hpc-sdk/pgi-compilers/19.10/x86/pgi-user-guide/index.htm)（现已并入[Nvidia HPC SDK](https://developer.nvidia.com/hpc-sdk)）。
 
 **TODO**：OpenACC
 
@@ -1363,4 +1375,7 @@ MPI Bound 是由MPI程序的通信开销与同步开销决定的。如果MPI Bou
 <h2 id="4">4. 鸣谢</h2>
 
 感谢：
-- [Ayanokoji-li](https://github.com/Ayanokoji-li)，它完成了本教程中的MPI部分，包括MPI的讲解和优化，以及为这个教程创建了一个仓库。
+- [Ayanokoji-li](https://github.com/Ayanokoji-li)，他完成了：
+    - MPI部分，包括MPI的讲解和优化
+    - CUDA部分
+    - 为这个教程创建了一个仓库。
