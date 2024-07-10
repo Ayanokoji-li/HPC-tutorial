@@ -837,7 +837,7 @@ CUDA(computer unified device architecture)是NVIDIA针对自家产品推出的�
 
 ![CPU-GPU](./pic/CPU-GPU.png)
 
-首先我们可以看到CPU具有数量大体相同的计算与控制核心，因此CPU可以快速地处理具有复杂逻辑的任务。而对于GPU，计算核心远大于控制核心。示意图中的一行（一黄一紫一堆绿的一行）代表一个[SM](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)(streaming multiprocessor)。可以将其单独看作一个完整的多核处理单元（类似AVX计算单元）这意味着GPU可以同时处理大量数据，但是只能应对简单逻辑的任务。因此，CUDA程序可以看作SIMD架构的程序。
+首先我们可以看到CPU具有数量大体相同的计算与控制核心，因此CPU可以快速地处理具有复杂逻辑的任务。而对于GPU，计算核心远大于控制核心。示意图中的一行（一黄一紫一堆绿的一行）代表一个[SM](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#hardware-implementation)(streaming multiprocessor)。可以将其单独看作一个完整的多核处理单元（类似AVX计算单元）这意味着GPU可以同时处理大量数据，但是只能应对简单逻辑的任务。因此，CUDA程序可以看作是与SIMD架构类似的程序模式，官方称之为[SIMT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)。
 
 CUDA支持的编程语言有C,C++,Fortran,Python。同时，他还有丰富的加速库如CUBLAS,CUFFT,Thrust等。CUDA提供了两层API来管理GPU，分别是驱动库和运行时库。驱动库虽然功能强大，能全面的控制GPU的运行，但是其编写难度很大。因此，我们将重心放在了编写难度较小的运行时库。
 
@@ -859,7 +859,7 @@ CUDA程序由NVCC编译器进行编译。编译时，NVCC会区分host代码（C
 
 安装完成后可以在命令行输入`nvcc --version`。若能正常打印则安装完成。
 
-在文件夹`<CUDA_HOME>/extras/demo_suite`下有一些编译好的程序可以运行，如`bandwidthTest`，`busGrind`，`deviceQuery`等可以得到当前设备的信息。
+<!-- 在文件夹`<CUDA_HOME>/extras/demo_suite`下有一些编译好的程序可以运行，如`bandwidthTest`，`busGrind`，`deviceQuery`等可以得到当前设备的信息。 -->
 
 ##### NVCC 编译选项、运行与环境变量
 
@@ -984,14 +984,16 @@ int main(int argc, char const *argv[])
 
 - **函数类型**
 
-    在CUDA编程中，每个函数都会通过declaration specifier标记函数的执行方与调用方。有如下：
+    在CUDA编程中，每个函数都会通过[Function Execution Space Specifiers](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#function-execution-space-specifiers)标记函数的执行方与调用方。有如下：
     - `__device__`: 函数由device执行，由device调用
     - `__global__`：函数由device执行，由host调用。而这样定义的函数一般被称为核函数（[kernel](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=nvcc#kernels)）
     - `__host__`: 函数由host执行，由host调用（当函数没有declaration specifier时默认为该项）
 
 - **核函数调用**
 
-    从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关
+    从上述代码我们可以发现核函数在host上的调用是很特殊的。需要将<<< **GridDim**, **BlockDim** >>>放在函数名与传参之间，代表了核函数的线程执行配置，其含义与接下来的线程模型相关。
+
+    核函数的调用在host上是立即返回的。而`cudaMemcpy`等用于内存拷贝的函数会隐式等待之前提交的所有核函数完成再执行，并且该函数会等待操作执行完成之后再返回。
 
 - **设备内存分配**
 
@@ -1003,7 +1005,147 @@ int main(int argc, char const *argv[])
 
 ![Grid-Block](./pic/Grid-Block.png)
 
-Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到一个SM上执行）。而Block会根据GridDim组织为一个Grid。核函数的一次调用只会映射到一个Grid上运行。
+Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到一个SM上执行）。一个Block内Thread可以通过threadIdx(.x/y/z)唯一确定。一个Block大小可以从blockDim(.x/y/z)获得。
+
+而Block会根据GridDim组织为一个Grid。核函数的一次调用只会映射到一个Grid上运行。一个Grid内Block可以通过blockIdx(.x/y/z)唯一确定。一个Grid大小可以从gridDim(.x/y/z)获得。
+
+这里设置的线程执行配置是一种抽象的配置。实际GPU执行时会将Block根据GPU计算资源自动分配到SM上，下图是分配的示意图
+
+![GPU-SM-Block](./pic/GPU-SM-Block.png)
+
+需要注意的是实际运行时一个SM内Block的执行顺序是不确定的。又因为SM之间是相互独立无法影响的，CUDA API提供的直接同步函数，如`__syncthreads()`仅能同步一个Block内的线程，无法做到Block间同步。如果希望Block间同步则需要手动实现，如使用原子操作与全局内存或借助核函数的隐式Block同步。也可以参考[论文Inter-block GPU communication via fast barrier synchronization](https://ieeexplore.ieee.org/abstract/document/5470477)进一步了解。但由于Block执行的不确定性，一般Block间同步开销很大。所以如果真的需要进行Block间同步，优先考虑修改算法或利用核函数的隐式同步。
+
+分配之后，SM会将Block内的Thread映射至CUDA Cores上执行，并且以[Warp](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第一段)的形式管理、调度、执行任务。他们会在共享相同的程序地址，私有PC和寄存器状态。因此能做到独立执行与分支。但是Warp内所有线程同一时间只会执行相同的代码。假设在Warp中发生了Threads进入了不同分支，则会发生[Warp Divergence](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第三段)。此时Warp会禁用不进入分支的Thread，然后执行。
+
+Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x`，详情可以参考[Thread Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#thread-hierarchy)得到Thread的一维索引后连续划分，一般以32为一个单位（可以运行样例程序`deviceQuery`查询）。如果Warp中线程不满32则会创建空线程填充，故Block内Thread数量不是32的倍数时会导致有一些运算设备闲置。
+
+##### CUDA内存模型
+
+下图是来自官网[Memory Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#memory-hierarchy)的内存模型示意图。
+
+![Memory](./pic/CUDA-memory.png)
+
+图中介绍了四种内存的位置与生命周期。我们先聚焦于局部变量（local memory）、共享变量（share memory）和全局变量（global memory）。
+
+除了local memory，其他两种设备变量都需要[Variable Memory Space Specifiers](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=compile#variable-memory-space-specifiers)修饰。
+
+- `local memory`:
+  - 和普通C程序局部变量的定义和使用方式一样，只是定义在了核函数内
+    ```cpp
+    __global__ void exampleKernel()
+    {
+    // 定义一个 local memory 变量
+    float localVariable = 1.0f;
+
+    // 使用 localVariable 进行计算
+    }
+    ```
+
+  - 作用域是线程自身
+  - 生命周期直到该线程的销毁，一般是核函数的结束。
+- `share memory`:
+  - 在核函数开始处用`__shared__ <type> <symbol>[const num]`声明变量。不能在控制流语句内使用。
+    ```cpp
+    __global__ void exampleKernel() {
+    // 定义一个共享内存变量
+    __shared__ float sharedVariable[256];
+
+    // 使用 sharedVariable 进行计算...
+    }
+    ```
+  - 如果需要动态声明，则需要在启动核函数时扩展<<< **GridDim**, **BlockDim** >>>至<<< **GridDim**, **BlockDim** , **sharedMemSize**>>>。其内存地址通过`extern __shared__ <type> <symbol>[]`获得
+    ```cpp
+    __global__ void dynamicSharedMemoryKernel(int* data, int dataSize) {
+    // 动态分配共享内存
+    extern __shared__ int sharedData[];
+
+    // 使用 sharedData 进行计算...
+    // 例如，将每个线程的数据复制到共享内存中
+    int tid = threadIdx.x;
+    if (tid < dataSize) {
+        sharedData[tid] = data[tid];
+    }
+
+    // 确保所有线程都完成了共享内存的写入
+    __syncthreads();
+
+    // 其他使用共享内存的计算...
+    }   
+
+    // 在主函数中调用 kernel，指定动态共享内存的大小
+    int main() {
+        int* data;
+        int dataSize = 256; // 假设数据大小为 256
+        int sharedMemSize = dataSize * sizeof(int);
+
+        // 分配 data 空间、初始化 data、拷贝数据到设备等操作...
+
+        // 启动 kernel，最后一个参数指定动态共享内存的大小
+        dynamicSharedMemoryKernel<<<1, dataSize, sharedMemSize>>>(data, dataSize);
+
+        // 清理资源等操作...
+
+        return 0;
+    }
+    ```
+  - 作用域是Block内的所有线程。
+  - 生命周期直到Block的销毁，一般是核函数的结束
+  - 由于共享内存物理设计上离核更近（有些结构上与L1共用片上缓存，其配比由核函数间接决定），其大小有限但访问速度十分快。一般是优化CUDA程序访存的重点。
+  - 
+- `global memory`
+  - 可以在全局作用域用`__device__`(线性内存)或`__constant__`(常量内存)修饰符声明变量。
+  - 若需要动态分配可以在host代码中使用先声明需要的指针变量，在host上通过`cudaMalloc`，`cudaFree`管理。
+
+    ```cpp
+    #include <cuda_runtime.h>
+    #include <iostream>
+
+    // 声明全局内存中的变量
+    __device__ float globalVar = 10.0f;
+
+    // 声明常量内存中的变量
+    __constant__ float constVar = 20.0f;
+
+    // 核函数，使用全局变量和常量变量
+    __global__ void useGlobalAndConstVar(float *output, int dataSize) 
+    {
+        int idx = threadIdx.x;
+        if (idx < dataSize) 
+        {
+                output[idx] = globalVar + constVar;
+        }
+    }
+
+    int main() 
+    {
+        const int dataSize = 256;
+        float hostArray[dataSize];
+
+        // 分配设备内存
+        float *devArray;
+        cudaMalloc((void **)&devArray, dataSize * sizeof(float));
+
+        // 启动核函数
+        useGlobalAndConstVar<<<1, dataSize>>>(devArray, dataSize);
+
+        // 将结果从设备内存复制回主机内存
+        cudaMemcpy(hostArray, devArray, dataSize * sizeof(float),cudaMemcpyDeviceToHost);
+
+        // 打印结果
+        for (int i = 0; i < 10; ++i) 
+        { // 仅打印前10个结果
+            std::cout << "Result[" << i << "]: " << hostArray[i] << std::endl;
+        }
+
+        // 清理设备内存
+        cudaFree(devArray);
+
+        return 0;
+    }
+    ```
+  - 如果需要在host控制在全局作用域中声明的变量则需要`cudaGetSymbolAddress() / cudaGetSymbolSize() / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol()`
+  - 全局内存还包括了纹理内存([Texture Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#texture-memory))和表面内存([Surface Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#surface-memory))。他们具有特殊优化的缓存结构。还有统一虚拟内存([UVA](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#unified-virtual-address-space))，用于控制多设备与主机内存访问。[Device Memory](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime)还有很多种，详细了解可以参考官网。
+
 
 #### OpenACC
 
@@ -1019,6 +1161,8 @@ Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到�
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
 - [uProf](https://www.amd.com/en/developer/uprof.html)，由AMD公司推出的性能分析器。**不推荐使用**，目前Geekpie_HPC好像也没什么人用。
 - [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
+- [Nsight Systems](https://docs.nvidia.com/nsight-systems/UserGuide/index.html)，由Nvidia公司推出的系统级性能分析器，包括了GPU与CPU之间的交互以及运行状态等。能够跟踪OpenMP,MPI,CUDA,OpenACC。有UI界面。
+- [Nsight Compute](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html),由Nvidia公司推出的内核级性能分析器，包括了核函数运行时的微架构（内存及缓存间的交互）等。有UI界面。
 
 VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运行所有类型的性能分析，但是显然我们更能直观地在GUI中查看分析结果。你可以在[这里 (Windows)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-windows/2024-2/use-case-and-prerequisites.html)或者[这里 (Linux)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-linux/2024-2/use-case-and-prerequisites.html)，跟着它的workflow来学习VTune的使用方法。当然，VTune GUI提供了远程Profile的方法，只要远程机器中安装有VTune，你就可以在本地的VTune启动远程Profile，所有的数据文件都会保存在本地。
 
@@ -1128,6 +1272,8 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 
 #### Core Bound
 
+#TODO GPU-warp divergence
+
 Core Bound 是由你的程序的计算量决定的。如果Core Bound较高，这通常意味着你需要优化你的算法，或者精简某些需要重复计算的代码。本教程不涉及算法的讲解。
 
 此外，一些[Hazard](https://en.wikipedia.org/wiki/Hazard_(computer_architecture))也会导致Core Bound较高。这时候，你可以做循环展开（[Loop Unroll](https://en.wikipedia.org/wiki/Loop_unrolling)），或者优化一些不必要的分支判断。
@@ -1137,6 +1283,8 @@ SIMD也是优化计算的好方法。但是，某些情况下，数据的计算�
 *Tips: 对于计算机而言，做除法通常会比做乘法慢得多。因此，在可能的情况下，编译器会自动将你程序中的除法优化为乘法。但是，某些编译器似乎不会优化SIMD的除法指令。这时候你就需要手动将这些除法指令优化为乘法指令。*
 
 #### Memory Bound
+
+#TODO GPU-shared memory
 
 Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的RAM足够大，不太会涉及到向SWAP交换的优化，因此你应该主要关注针对Cache的优化。
 
