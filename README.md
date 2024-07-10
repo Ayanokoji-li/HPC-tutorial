@@ -1015,6 +1015,8 @@ Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到�
 
 需要注意的是实际运行时一个SM内Block的执行顺序是不确定的。又因为SM之间是相互独立无法影响的，CUDA API提供的直接同步函数，如`__syncthreads()`仅能同步一个Block内的线程，无法做到Block间同步。如果希望Block间同步则需要手动实现，如使用原子操作与全局内存或借助核函数的隐式Block同步。也可以参考[论文Inter-block GPU communication via fast barrier synchronization](https://ieeexplore.ieee.org/abstract/document/5470477)进一步了解。但由于Block执行的不确定性，一般Block间同步开销很大。所以如果真的需要进行Block间同步，优先考虑修改算法或利用核函数的隐式同步。
 
+*UPDATE：CUDA 9引入了协作组，提供了使用简便的Thread间，Block间和Grid间（多设备）同步，可以参考文档[Cooperative Groups](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#introduction-cg)，还提供了集合函数如reduce，scan。（用起来很方便，待更新集合函数的相关性能）*
+
 分配之后，SM会将Block内的Thread映射至CUDA Cores上执行，并且以[Warp](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第一段)的形式管理、调度、执行任务。他们会在共享相同的程序地址，私有PC和寄存器状态。因此能做到独立执行与分支。但是Warp内所有线程同一时间只会执行相同的代码。假设在Warp中发生了Threads进入了不同分支，则会发生[Warp Divergence](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第三段)。此时Warp会禁用不进入分支的Thread，然后执行。
 
 Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x`，详情可以参考[Thread Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#thread-hierarchy)得到Thread的一维索引后连续划分，一般以32为一个单位（可以运行样例程序`deviceQuery`查询）。如果Warp中线程不满32则会创建空线程填充，故Block内Thread数量不是32的倍数时会导致有一些运算设备闲置。
