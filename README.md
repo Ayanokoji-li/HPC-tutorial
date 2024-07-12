@@ -997,7 +997,7 @@ int main(int argc, char const *argv[])
 
 - **设备内存分配**
 
-    device上的内存需要在host代码中显式分配。上述代码中通过`cudaMalloc`分配。所分配的内存被称为[全局内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#device-memory)（此处为线性内存linear memory）。除了`cudaMalloc`之外，CUDA API还提供了其他类型的全局内存，如`cudaHostAlloc`用于分配[页锁定内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#page-locked-host-memory)。除了全局内存外，设备内存还有[共享内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#shared-memory)等其他类型。具体会在内存模型中展开。
+    device上的内存需要在host代码中显式分配。上述代码中通过`cudaMalloc`分配。所分配的内存被称为[设备内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#device-memory)。此处是设备内存中的全局内存。除了`cudaMalloc`之外，CUDA API还提供了其他类型的分配在设备内存上的全局内存，如`cudaHostAlloc`用于分配[页锁定内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#page-locked-host-memory)。除了分配设备内存还可以分配[共享内存](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#shared-memory)等其他类型。具体会在内存模型中展开。
 
 ##### CUDA线程模型
 
@@ -1015,9 +1015,13 @@ Thread会根据BlockDim组织为一个Block（一般一个Block会被分配到�
 
 需要注意的是实际运行时一个SM内Block的执行顺序是不确定的。又因为SM之间是相互独立无法影响的，CUDA API提供的直接同步函数，如`__syncthreads()`仅能同步一个Block内的线程，无法做到Block间同步。如果希望Block间同步则需要手动实现，如使用原子操作与全局内存或借助核函数的隐式Block同步。也可以参考[论文Inter-block GPU communication via fast barrier synchronization](https://ieeexplore.ieee.org/abstract/document/5470477)进一步了解。但由于Block执行的不确定性，一般Block间同步开销很大。所以如果真的需要进行Block间同步，优先考虑修改算法或利用核函数的隐式同步。
 
+*UPDATE：CUDA 9引入了协作组，提供了使用简便的Thread间，Block间和Grid间（多设备）同步，可以参考文档[Cooperative Groups](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#introduction-cg)，还提供了集合函数如reduce，scan。（用起来很方便，待更新集合函数的相关性能）*
+
 分配之后，SM会将Block内的Thread映射至CUDA Cores上执行，并且以[Warp](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第一段)的形式管理、调度、执行任务。他们会在共享相同的程序地址，私有PC和寄存器状态。因此能做到独立执行与分支。但是Warp内所有线程同一时间只会执行相同的代码。假设在Warp中发生了Threads进入了不同分支，则会发生[Warp Divergence](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture)(文档第三段)。此时Warp会禁用不进入分支的Thread，然后执行。
 
 Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x`，详情可以参考[Thread Hierarchy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#thread-hierarchy)得到Thread的一维索引后连续划分，一般以32为一个单位（可以运行样例程序`deviceQuery`查询）。如果Warp中线程不满32则会创建空线程填充，故Block内Thread数量不是32的倍数时会导致有一些运算设备闲置。
+
+GPU在处理大规模并行计算任务时的高效表现，部分原因在于其独特的内存访问调度机制和上下文切换开销。GPU切换上下文的开销几乎为零。因此，当一个Warp（一组并行执行的线程）请求内存访问时，Warp调度器会暂时将该Warp置于等待状态，并立即调度另一个不需要等待内存访问的Warp执行计算任务。这种机制有效地利用了计算资源，通过并行执行其他计算任务来掩盖内存访问的延迟，从而提高了整体的计算效率。该技术被称为Latency Hiding，有一篇UCB的文章[Understanding Latency Hiding on GPUs](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-143.html)可供进一步了解。
 
 ##### CUDA内存模型
 
@@ -1043,6 +1047,7 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
 
   - 作用域是线程自身
   - 生命周期直到该线程的销毁，一般是核函数的结束。
+  - 局部变量的内存位置和全局变量一样，都分配到了设备内存上。因此访问速度和全局内存相近。
 - `share memory`:
   - 在核函数开始处用`__shared__ <type> <symbol>[const num]`声明变量。不能在控制流语句内使用。
     ```cpp
@@ -1090,8 +1095,7 @@ Warp的划分Block内的Thread是根据公式`threadIdx.z * blockDim.x * blockDi
     ```
   - 作用域是Block内的所有线程。
   - 生命周期直到Block的销毁，一般是核函数的结束
-  - 由于共享内存物理设计上离核更近（有些结构上与L1共用片上缓存，其配比由核函数间接决定），其大小有限但访问速度十分快。一般是优化CUDA程序访存的重点。
-  - 
+  - 由于共享内存物理设计上离核更近（有些结构上与L1共用片上缓存，其配比由核函数间接决定，也可以通过API手动控制，不过不能完全控制），其大小有限但访问速度十分快。一般是优化CUDA程序访存的重点。
 - `global memory`
   - 可以在全局作用域用`__device__`(线性内存)或`__constant__`(常量内存)修饰符声明变量。
   - 若需要动态分配可以在host代码中使用先声明需要的指针变量，在host上通过`cudaMalloc`，`cudaFree`管理。
@@ -1265,6 +1269,10 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
     - 请打开CS110 24s的[lab13](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab13/lab13.html)，根据其引导熟悉OpenMP对for循环的优化。
     - 请使用两种方式优化一段计算$sum = \sum_{i = 0}^{N - 1} a[i]$的[代码](./practice/ex2-4.cpp)。
 - **TODO**：练习使用MPI
+- 练习使用MPI
+  - 请使用MPI计算$\pi$值
+  - 请实现MPI_Scan。
+  - 请实现矩阵相乘。
 - **TODO**：练习使用CUDA
 - **TODO**：练习使用OpenACC
 - 如果你已经完成了[编译](#1)部分的编译[Conquest](https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/3014164484/Getting+started+with+Conquest+for+ISC24+SCC)练习，你现在可以试着做一下Weak Scaling和Strong Scaling，并采用合适的图表展示你的数据。
@@ -1284,8 +1292,6 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 
 #### Core Bound
 
-#TODO GPU-warp divergence
-
 Core Bound 是由你的程序的计算量决定的。如果Core Bound较高，这通常意味着你需要优化你的算法，或者精简某些需要重复计算的代码。本教程不涉及算法的讲解。
 
 此外，一些[Hazard](https://en.wikipedia.org/wiki/Hazard_(computer_architecture))也会导致Core Bound较高。这时候，你可以做循环展开（[Loop Unroll](https://en.wikipedia.org/wiki/Loop_unrolling)），或者优化一些不必要的分支判断。
@@ -1294,9 +1300,16 @@ SIMD也是优化计算的好方法。但是，某些情况下，数据的计算�
 
 *Tips: 对于计算机而言，做除法通常会比做乘法慢得多。因此，在可能的情况下，编译器会自动将你程序中的除法优化为乘法。但是，某些编译器似乎不会优化SIMD的除法指令。这时候你就需要手动将这些除法指令优化为乘法指令。*
 
-#### Memory Bound
+在GPU程序中，我们提到过在Warp中发生了Threads进入了不同分支，则会发生Warp Divergence，从而导致实际计算时计算资源没有完全用上。因此我们需要尽可能删除分支区。
 
-#TODO GPU-shared memory
+常用的方法有：
+
+1. 划分核函数，将其作为多个核函数分别启动。
+2. 化分支为计算。
+
+若涉及多核函数处理问题时，可以考虑CUDA提供的流处理API用于通过重叠核函数的执行，进一步提高数据吞吐量,详情可以查看官方文档对[Asynchronous Concurrent Execution](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#asynchronous-concurrent-execution)的讲解。（之所以没涉及是因为作者不会。。。）
+
+#### Memory Bound
 
 Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的RAM足够大，不太会涉及到向SWAP交换的优化，因此你应该主要关注针对Cache的优化。
 
@@ -1331,6 +1344,18 @@ Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的R
 2. 针对某些数据的结构进行优化。一些数据结构可能是Cache-unfriendly的，这是因为这些数据结构中某些需要被频繁访问的数据地址间隔太远，提高了Cache Miss率。
 
 3. Cache Blocking。由于Cache的大小是有限的，在访问空间比较大的数据时，cache可能会驱逐掉此前访问到的数据。当我们需要再次利用这些数据时，就需要重新从RAM中加载。Cache Blocking本质上也是改变数据的访问模式，不过它是针对特定的Cache大小，来调整你的代码
+
+在GPU中，当Thread数量足够多，访问延迟就会被掩盖，此时一般瓶颈出现在了Throughput（吞吐量）因此我们首先考虑的是Warp中如何访问内存以及内存的位置，从而提高吞吐量。
+
+1. 合并访问
+    
+    Warp中的Threads共用L1缓存，同时缓存行的大小一般会随计算能力的增强而变大。因此，如果能让Warp中的Threads访问连续的对齐内存空间能提高访问效率。
+
+2. 共享内存
+
+    由于局部变量与全局变量都存储在了设备内存上，离核较远。假设我们要频繁操作的话可以通过共享内存提高访问速度。
+
+    但是需要注意的是共享内存只共享Block中的Threads,假设需要跨Block的共享一般只能通过全局内存。
 
 #### I/O Bound
 
@@ -1367,6 +1392,12 @@ MPI Bound 是由MPI程序的通信开销与同步开销决定的。如果MPI Bou
 ### 练习
 
 **TODO**：考虑去年CA的优化project（用于熟悉microarchitecture的优化），以及并行计算的作业（侧重于MPI的优化）
+
+- CUDA
+  - 优化[RedBlack](./practice/CUDA/Red-Black/main.cu)中的核函数。其原题是CS110 24s的[project 4](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/project/p4/project4.html),此处直接化简为RedBlack。具体可以查看CPU部分和GPU演示的代码。
+  - 优化[Transpose](./practice/CUDA/Transpose/main.cu)中用于矩阵转置的核函数。
+- MPI
+  - 优化之前练习的三个程序。
 
 <h2 id="4">4. 鸣谢</h2>
 

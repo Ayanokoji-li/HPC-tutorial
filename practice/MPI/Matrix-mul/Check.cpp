@@ -6,9 +6,14 @@
 #define EPS 1e-6
 #define FILE_NUM 4
 
-int main()
+int main(int argc, char const *argv[])
 {
-    for(int i = 1; i <= FILE_NUM; i ++)
+    int file_num = 4;
+    if(argc == 2)
+    {
+        file_num = std::stoi(argv[1]);
+    }
+    for(int i = 1; i <= file_num; i ++)
     {
         std::ifstream f1((std::string(DATA_PATH) + std::to_string(i) + ".ref").c_str(), std::ios::binary);
         std::ifstream f2((std::string(DATA_PATH) + std::to_string(i) + ".ans").c_str(), std::ios::binary);
