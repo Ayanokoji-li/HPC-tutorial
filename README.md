@@ -1275,6 +1275,7 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
   - 请实现矩阵相乘。
 - **TODO**：练习使用CUDA
 - **TODO**：练习使用OpenACC
+- 综合练习。这是CS110 24s的[Project 4](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/project/p4/project4.html)，可以在[这里](./practice/ex2-6/src/baseline.c)查看代码的baseline。你需要做的是在[这里](./practice/ex2-6/src/impl.c)编写你的优化代码。这一阶段，你只需要尝试将SIMD、OpenMP等并行技巧运用在这段代码上。到了下一章，我们会以这段代码为例子讲解其他优化技巧。
 - 如果你已经完成了[编译](#1)部分的编译[Conquest](https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/3014164484/Getting+started+with+Conquest+for+ISC24+SCC)练习，你现在可以试着做一下Weak Scaling和Strong Scaling，并采用合适的图表展示你的数据。
 - 如果你已经编译过[编译](#1)部分提到的SC24 - SCC题目的话，你现在可以尝试运行它们。
 
