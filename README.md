@@ -519,8 +519,6 @@ OpenMP支持C、C\+\+或者Fortran。许多厂商都提供了OpenMP相关的库�
 
 #### MPI
 
-**TODO**：进程讲解（内存、通信）、节点绑定与核心绑定
-
 ##### Introduce
 
 [MPI]是message passing interface的缩写，是一组用于编写多节点并行程序的数据通信的规范，可以看作是一种协议或接口。节点一般指的是集群中的机器。一般而言，MPI程序是分布式内存模型，是SPMD（[single program 
@@ -827,7 +825,6 @@ int main(int argc, char **argv)
 ### GPU(异构)加速
 
 #### CUDA
-**TODO**：CUDA
 
 ##### Introduce
 
@@ -1268,7 +1265,6 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 - 练习使用OpenMP。
     - 请打开CS110 24s的[lab13](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab13/lab13.html)，根据其引导熟悉OpenMP对for循环的优化。
     - 请使用两种方式优化一段计算$sum = \sum_{i = 0}^{N - 1} a[i]$的[代码](./practice/ex2-4.cpp)。
-- **TODO**：练习使用MPI
 - 练习使用MPI
   - 请使用MPI计算$\pi$值
   - 请实现MPI_Scan。
@@ -1363,8 +1359,6 @@ Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的R
     常用的解决bank conflict的方法是添加空数据(一般叫padding)从而使需要的数据能够在访问时由不同的bank处理。
 
 #### I/O Bound
-
-**TODO**：讲解优化MPI Bound，主要集中于通信量和负载均衡的优化
 
 I/O Bound 主要有两方面，分别是硬盘读写与MPI框架下的通信。
 
