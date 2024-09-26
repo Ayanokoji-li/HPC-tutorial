@@ -519,8 +519,6 @@ OpenMP支持C、C\+\+或者Fortran。许多厂商都提供了OpenMP相关的库�
 
 #### MPI
 
-**TODO**：进程讲解（内存、通信）、节点绑定与核心绑定
-
 ##### Introduce
 
 [MPI]是message passing interface的缩写，是一组用于编写多节点并行程序的数据通信的规范，可以看作是一种协议或接口。节点一般指的是集群中的机器。一般而言，MPI程序是分布式内存模型，是SPMD（[single program 
@@ -827,7 +825,6 @@ int main(int argc, char **argv)
 ### GPU(异构)加速
 
 #### CUDA
-**TODO**：CUDA
 
 ##### Introduce
 
@@ -1176,9 +1173,9 @@ GPU在处理大规模并行计算任务时的高效表现，部分原因在于�
 - [VTune](https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/overview.html)，由Intel公司推出的性能分析器，可以分析从微架构 (Microarchitecture) 到多节点之间的大部分内容，且支持查看某一行代码对应的汇编指令，以及其相关的性能指标。Vtune唯一的缺点就是只支持Intel处理器。
 - [Armforge](https://developer.arm.com/documentation/101136/2020/)，由Arm公司推出的性能分析器，在Vtune不可用时推荐使用。Armforge并不支持对代码的逐行分析，但是它可以对采用不同并行模型（如OpenMP、MPI）的程序进行调试。
 - [uProf](https://www.amd.com/en/developer/uprof.html)，由AMD公司推出的性能分析器。**不推荐使用**，目前Geekpie_HPC好像也没什么人用。
-- [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。
-- [Nsight Systems](https://docs.nvidia.com/nsight-systems/UserGuide/index.html)，由Nvidia公司推出的系统级性能分析器，包括了GPU与CPU之间的交互以及运行状态等。能够跟踪OpenMP,MPI,CUDA,OpenACC。有UI界面。
-- [Nsight Compute](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html),由Nvidia公司推出的内核级性能分析器，包括了核函数运行时的微架构（内存及缓存间的交互）等。有UI界面。
+- [ITAC](https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/trace-analyzer-documentation.html)，Intel Trace Analyzer and Collector，一个专用于分析MPI bound的性能分析器。只要是使用`mpiicc`编译的MPI程序，都可以用它进行分析。它非常易于使用，只需要在`mpirun`命令中加入`-trace`即可让程序输出分析文件。可以通过设置环境变量`VT_LOGFILE_FORMAT`为`SINGLESTF`使输出文件只有一个。
+- [Nsight Systems](https://docs.nvidia.com/nsight-systems/UserGuide/index.html)，由Nvidia公司推出的系统级性能分析器，包括了GPU与CPU之间的交互以及运行状态等。能够跟踪OpenMP,MPI,CUDA,OpenACC。有UI界面。一般命令可以用`nsys profile <exec> <args>`。默认输出文件类似为`report1.nsys-rep`
+- [Nsight Compute](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html),由Nvidia公司推出的内核级性能分析器，包括了核函数运行时的微架构（内存及缓存间的交互）等。有UI界面。一般命令可以用`ncu -f -o <output file> --set full <exec> <args>`。需要注意的是如果不指明输出文件,ncu将只会在命令行输出结果并不会保存。
 
 VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运行所有类型的性能分析，但是显然我们更能直观地在GUI中查看分析结果。你可以在[这里 (Windows)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-windows/2024-2/use-case-and-prerequisites.html)或者[这里 (Linux)](https://www.intel.com/content/www/us/en/docs/vtune-profiler/tutorial-common-bottlenecks-linux/2024-2/use-case-and-prerequisites.html)，跟着它的workflow来学习VTune的使用方法。当然，VTune GUI提供了远程Profile的方法，只要远程机器中安装有VTune，你就可以在本地的VTune启动远程Profile，所有的数据文件都会保存在本地。
 
@@ -1268,7 +1265,6 @@ VTune提供了GUI和命令行两种交互方式。两种交互方式都能够运
 - 练习使用OpenMP。
     - 请打开CS110 24s的[lab13](https://toast-lab.sist.shanghaitech.edu.cn/courses/CS110@ShanghaiTech/Spring-2024/labs/Lab13/lab13.html)，根据其引导熟悉OpenMP对for循环的优化。
     - 请使用两种方式优化一段计算$sum = \sum_{i = 0}^{N - 1} a[i]$的[代码](./practice/ex2-4.cpp)。
-- **TODO**：练习使用MPI
 - 练习使用MPI
   - 请使用MPI计算$\pi$值
   - 请实现MPI_Scan。
@@ -1358,9 +1354,11 @@ Memory Bound 是由你的程序的访存决定的。一般来说，HPC机器的R
 
     但是需要注意的是共享内存只共享Block中的Threads,假设需要跨Block的共享一般只能通过全局内存。
 
-#### I/O Bound
+    共享内存中的数据一般会以32位（4字节）分配给32个bank，每个bank能独立处理一次内存访问。因此，若同时发生不同bank的内存访问请求可以用一次处理解决所有的访问请求。除此之外，当Warp中的所有Thread访问同一个bank能够用一次处理，通过广播分发数据。除此之外的访问模式会导致bank多次处理访问请求，导致访问效率变低。
 
-**TODO**：讲解优化MPI Bound，主要集中于通信量和负载均衡的优化
+    常用的解决bank conflict的方法是添加空数据(一般叫padding)从而使需要的数据能够在访问时由不同的bank处理。
+
+#### I/O Bound
 
 I/O Bound 主要有两方面，分别是硬盘读写与MPI框架下的通信。
 
